@@ -1,0 +1,52 @@
+
+<html>
+   
+<head>
+<style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+</head>
+<body>
+
+<h2>Products</h2>
+
+<table>
+  <tr>
+    <th>Id</th>
+    <th>Name</th>
+    <th>Description</th>
+    <th>Price</th>
+    <th>Category</th>
+    <th>Photo</th>   
+  </tr>
+  {% for x in pro %} 
+  <tr>
+    <td>{{x.id}}</td>
+    <td>{{x.name}}</td>
+    <td>{{x.description}}</td>
+    <td>{{x.price}}</td>
+    <td>{{x.category}}</td>
+    <td><img src="{{x.photo.url}}" alt="" width="60" ></td>
+  </tr>
+  {% endfor %}
+</table>
+
+</body>
+
+</html>
+
+
