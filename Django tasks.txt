@@ -1,0 +1,140 @@
+1) CRCF report:
+
+A Cross-site request forgery hole is when a malicious site can cause a visitor's browser to make a request to your server that causes a change on the server. The server thinks that because the request comes with the user's cookies, the user wanted to submit that form.
+
+Depending on which forms on your site are vulnerable, an attacker might be able to do the following to your victims:
+
+    Log the victim out of your site. (On some sites, "Log out" is a link rather than a button!)
+    Change the victim's site preferences on your site. (Example: Google)
+    Post a comment on your site using the victim's login.
+    Transfer funds to another user's account.
+
+Attacks can also be based on the victim's IP address rather than cookies:
+
+    Post an anonymous comment that is shown as coming from the victim's IP address.
+    Modify settings on a device such as a wireless router or cable modem.
+    Modify an intranet wiki page.
+    Perform a distributed password-guessing attack without a botnet. (This assumes they have a way to tell whether the login succeeded, perhaps by submitting a second form that isn't protected against CSRF.)
+
+CSRF attacks usually involve JavaScript to submit the cross-site form automatically. It is possible for a malicious site to make a user submit a form to another site even without JavaScript, however: form fields can be hidden and buttons can be disguised as links or scrollbars.
+
+2) Input validation:
+
+Using validators¶
+
+Django’s form (and model) fields support use of utility functions and classes known as validators. A validator is a callable object or function that takes a value and returns nothing if the value is valid or raises a ValidationError if not. These can be passed to a field’s constructor, via the field’s validators argument, or defined on the Field class itself with the default_validators attribute.
+
+Validators can be used to validate values inside the field, let’s have a look at Django’s SlugField:
+
+from django.core import validators
+from django.forms import CharField
+
+class SlugField(CharField):
+    default_validators = [validators.validate_slug]
+
+As you can see, SlugField is a CharField with a customized validator that validates that submitted text obeys to some character rules. This can also be done on field definition so:
+
+slug = forms.SlugField()
+
+is equivalent to:
+
+slug = forms.CharField(validators=[validators.validate_slug])
+
+Common cases such as validating against an email or a regular expression can be handled using existing validator classes available in Django. For example, validators.validate_slug is an instance of a RegexValidator constructed with the first argument being the pattern: ^[-a-zA-Z0-9_]+$. See the section on writing validators to see a list of what is already available and for an example of how to write a validator.
+
+3) Save user input:
+
+Django also provides a built-in feature of Django Forms just like Django Models. One can create forms in Django and use them to fetch data from the user in a convenient manner.
+To begin with forms, one needs to be familiar with GET and POST requests in forms.
+
+    GET: GET, by contrast, bundles the submitted data into a string, and uses this to compose a URL. The URL contains the address where the data must be sent, as well as the data keys and values. You can see this in action if you do a search in the Django documentation, which will produce a URL of the form https://docs.djangoproject.com/search/?q=forms&release=1.
+    POST: Any request that could be used to change the state of the system – for example, a request that makes changes in the database – should use POST.
+
+4) Bulk delete:
+
+we should resort to rolling out your own kind of delete view, here is a basic example:
+
+class BulkDeleteView(View):
+    model = None
+
+    def post(self, request, *args, **kwargs):
+        delete_ids = request.POST['delete_ids'].split(',')  # should validate
+        self.model.objects.filter(pk__in=delete_ids).delete()
+        return render / redirect
+
+5) How to view saved photo from dashboard:
+
+Managing files¶
+
+This document describes Django’s file access APIs for files such as those uploaded by a user. The lower level APIs are general enough that you could use them for other purposes. If you want to handle “static files” (JS, CSS, etc.), see Managing static files (e.g. images, JavaScript, CSS).
+
+By default, Django stores files locally, using the MEDIA_ROOT and MEDIA_URL settings. The examples below assume that you’re using these defaults.
+
+However, Django provides ways to write custom file storage systems that allow you to completely customize where and how Django stores files. The second half of this document describes how these storage systems work.
+Using files in models¶
+
+When you use a FileField or ImageField, Django provides a set of APIs you can use to deal with that file.
+
+Consider the following model, using an ImageField to store a photo:
+
+from django.db import models
+
+class Car(models.Model):
+    name = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=5, decimal_places=2)
+    photo = models.ImageField(upload_to='cars')
+
+Any Car instance will have a photo attribute that you can use to get at the details of the attached photo:
+
+>>> car = Car.objects.get(name="57 Chevy")
+>>> car.photo
+<ImageFieldFile: cars/chevy.jpg>
+>>> car.photo.name
+'cars/chevy.jpg'
+>>> car.photo.path
+'/media/cars/chevy.jpg'
+>>> car.photo.url
+'http://media.example.com/cars/chevy.jpg'
+
+This object – car.photo in the example – is a File object, which means it has all the methods and attributes described below.
+
+Note
+
+The file is saved as part of saving the model in the database, so the actual file name used on disk cannot be relied on until after the model has been saved.
+
+For example, you can change the file name by setting the file’s name to a path relative to the file storage’s location (MEDIA_ROOT if you are using the default FileSystemStorage):
+
+>>> import os
+>>> from django.conf import settings
+>>> initial_path = car.photo.path
+>>> car.photo.name = 'cars/chevy_ii.jpg'
+>>> new_path = settings.MEDIA_ROOT + car.photo.name
+>>> # Move the file on the filesystem
+>>> os.rename(initial_path, new_path)
+>>> car.save()
+>>> car.photo.path
+'/media/cars/chevy_ii.jpg'
+>>> car.photo.path == new_path
+True
+
+Note
+
+While ImageField non-image data attributes, such as height, width, and size are available on the instance, the underlying image data cannot be used without reopening the image. For example:
+
+>>> from PIL import Image
+>>> car = Car.objects.get(name='57 Chevy')
+>>> car.photo.width
+191
+>>> car.photo.height
+287
+>>> image = Image.open(car.photo)
+# Raises ValueError: seek of closed file.
+>>> car.photo.open()
+<ImageFieldFile: cars/chevy.jpg>
+>>> image = Image.open(car.photo)
+>>> image
+<PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=191x287 at 0x7F99A94E9048>
+
+
+
+
